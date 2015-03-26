@@ -1,3 +1,3 @@
 {
-  "cmd": "{PROJECT_PATH}/genfiles.pl /tmp/gf/ 100"
+  "cmd": "{PROJECT_PATH}/genfiles.pl genfiles.conf"
 }
