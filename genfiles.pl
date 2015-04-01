@@ -3,33 +3,97 @@
 use strict;
 use warnings;
 
+use feature "say"; # say()
+
+#use Cwd; # cwd()
+use Getopt::Std; # getopts()
+use Config::General; # Config::General->getall()
+
 # default options
 use constant {
-  DEFAULT_CONFIG_FILE => "genfiles.conf",
-  DEFAULT_SUFFIX => ".tmp"
+  DEBUG => 1,
+  CONFIG_FILE => "genfiles.conf",
+  DEFAULT_NUMBER => 100,
+  DEFAULT_TYPE => "tmp"
 };
 
-# make STDOUT handle hot
-select((select(STDOUT), $|=1)[0]);
+# --version message
+sub VERSION_MESSAGE {
+  say STDERR "Genfiles Version 0.1";
+}
 
-# check number of commandline parameters
-(@ARGV <= 1)
-  or die("Usage: $0 [<config_file>]\n");
+# --help message
+sub HELP_MESSAGE {
+  say STDERR "Usage: $0 [-n <number_of_files>] [-t <file_type>] <directory>";
+  say STDERR "       -n number";
+  say STDERR "           Number of files to generate (default = ".&DEFAULT_NUMBER.")";
+  say STDERR "       -t type";
+  say STDERR "           Type of files to generate (default = ".&DEFAULT_TYPE.")";
+  say STDERR "           File types are defined in ".&CONFIG_FILE;
+  say STDERR "       directory";
+  say STDERR "           The absolute path of the directory in which files will be generated";
+  say STDERR "           Directory will be created if it does not exist";
+}
 
-# read parameters or use default
-my $config_file = $ARGV[0];
-$config_file or $config_file = &DEFAULT_CONFIG_FILE;
+# 1 mandatory commandline parameters
+if (@ARGV < 1) {
+  HELP_MESSAGE();
+  exit 1;
+}
+
+# declare commandline parameters
+our($opt_d, $opt_n, $opt_t);
+
+# read commandline parameters
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
+unless (getopts('n:t:')) {
+  HELP_MESSAGE();
+  exit 1;
+}
+
+# directory must begin with /
+unless ($ARGV[0] && $ARGV[0] =~ "^/") {
+  HELP_MESSAGE();
+  exit 1;
+}
+
+# read options or use default
+my $out_directory=$ARGV[0];
+my $out_number=$opt_n||&DEFAULT_NUMBER;
+my $out_type=$opt_t||&DEFAULT_TYPE;
+
+if (&DEBUG) {
+  say "d: ".$out_directory;
+  say "n: ".$out_number;
+  say "t: ".$out_type;
+}
+
+# compute full path to config file
+my ($script_vol, $script_path) = File::Spec->splitpath($0);
+$script_path = File::Spec->catpath($script_vol, $script_path, undef);
+my $config_file_path = $script_path.&CONFIG_FILE;
 
 # check config file
-(-f $config_file)
-  or die("Config file not found: $config_file\n");
+(-f $config_file_path)
+  or die("Config file not found: ".$config_file_path."\n");
 
 # read config file
-use Config::General;
-my $conf = Config::General->new(
-  -ConfigFile => $config_file,
+my $config_file = Config::General->new(
+  -ConfigFile => $config_file_path,
   -LowerCaseNames => 1);
-my %config = $conf->getall;
+my %config = $config_file->getall();
+
+# read options from config file
+my $out_suffix = $config{filetype}{$out_type}{suffix};
+my $out_min_size = $config{filetype}{$out_type}{minsize}||0;
+my $out_off_size = ($config{filetype}{$out_type}{maxsize}||0) - $out_min_size;
+
+# make STDOUT handle hot
+# so that messages are written during execution (not afterwards)
+select((select(STDOUT), $|=1)[0]);
+
+exit 0;
+########################################
 
 # process directories
 for (keys $config{directory}) {
