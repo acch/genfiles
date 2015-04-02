@@ -35,32 +35,31 @@ sub HELP_MESSAGE {
   say STDERR "           Directory will be created if it does not exist";
 }
 
-# 1 mandatory commandline parameters
-if (@ARGV < 1) {
-  HELP_MESSAGE();
-  exit 1;
-}
+################################################################################
+# CHECK COMMANDLINE OPTIONS
+################################################################################
 
-# declare commandline parameters
+# declare commandline options
 our($opt_d, $opt_n, $opt_t);
 
-# read commandline parameters
+# read commandline options
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 unless (getopts('n:t:')) {
   HELP_MESSAGE();
   exit 1;
 }
 
-# directory must begin with /
-unless ($ARGV[0] && $ARGV[0] =~ "^/") {
+# directory must be given an must be absolute path
+# unless ($ARGV[0] && $ARGV[0] =~ "^/") {
+unless ($ARGV[0] && File::Spec->file_name_is_absolute($ARGV[0])) {
   HELP_MESSAGE();
   exit 1;
 }
 
-# read options or use default
+# use commandline options or default
 my $out_directory=$ARGV[0];
-my $out_number=$opt_n||&DEFAULT_NUMBER;
-my $out_type=$opt_t||&DEFAULT_TYPE;
+my $out_number=$opt_n || &DEFAULT_NUMBER;
+my $out_type=$opt_t || &DEFAULT_TYPE;
 
 if (&DEBUG) {
   say "d: ".$out_directory;
@@ -68,10 +67,14 @@ if (&DEBUG) {
   say "t: ".$out_type;
 }
 
+################################################################################
+# READ CONFIG FILE
+################################################################################
+
 # compute full path to config file
 my ($script_vol, $script_path) = File::Spec->splitpath($0);
 $script_path = File::Spec->catpath($script_vol, $script_path, undef);
-my $config_file_path = $script_path.&CONFIG_FILE;
+my $config_file_path = File::Spec->catfile($script_path, &CONFIG_FILE);
 
 # check config file
 (-f $config_file_path)
@@ -85,61 +88,68 @@ my %config = $config_file->getall();
 
 # read options from config file
 my $out_suffix = $config{filetype}{$out_type}{suffix};
-my $out_min_size = $config{filetype}{$out_type}{minsize}||0;
-my $out_off_size = ($config{filetype}{$out_type}{maxsize}||0) - $out_min_size;
+my $out_min_size = $config{filetype}{$out_type}{minsize} || 0;
+my $out_off_size = ($config{filetype}{$out_type}{maxsize} || 0) - $out_min_size;
+my $buffer_size = $config{buffersize} * 1024 || 0;
+
+# TODO: check that min_size < max_size
 
 # make STDOUT handle hot
-# so that messages are written during execution (not afterwards)
+# so that messages are written during script execution (not afterwards)
 select((select(STDOUT), $|=1)[0]);
 
-exit 0;
-########################################
+################################################################################
+# CREATE DIRECTORY
+################################################################################
 
-# process directories
-for (keys $config{directory}) {
-  # read options from config file
-  my $dir = $_;
-  my $num_files = $config{directory}{$dir}{count};
-  my $suffix = $config{directory}{$dir}{suffix};
-  $suffix or $suffix = &DEFAULT_SUFFIX;
-  my $min_size = $config{directory}{$dir}{minsize};
-  my $off_size = $config{directory}{$dir}{maxsize} - $min_size;
+# create directory if it does not exist
+unless (-d $out_directory) {
+  mkdir($out_directory)
+    or die("Can't create $out_directory: $!");
+}
 
-  print "Generating $num_files files of random size in $dir with suffix $suffix...\n";
+################################################################################
+# GENERATE BUFFER
+################################################################################
 
-  # create directory if it does not exist
-  unless (-d $dir) {
-    mkdir($dir)
-      or die("Can't create $dir: $!");
-  }
+say "Generating buffer of size ".($buffer_size/1024)." KB...";
 
-  # process files
-  for (my $i = 0; $i < $num_files; $i++) {
-  	# compute buffer size
-  	my $size = $min_size;
-  	$size += int(rand($off_size));
-    $size *= 1024;
+my $buffer = "";
+for (my $i = 0; $i < $buffer_size; $i++) {
+  # generate random ascii character
+  $buffer .= chr(32 + int(rand(128 - 32)));
+}
 
-  	# compute filename
-  	my $name = "file_".$i.$suffix;
+################################################################################
+# GENERATE FILES
+################################################################################
 
-  	# generate buffer
-  	my $outBuf = "";
-  	for (my $j = 0; $j < $size; $j++) {
-  		# generate random byte
-  		$outBuf .= chr(int(rand(256)));
-  	}
+say "Generating $out_number files of random size in $out_directory with suffix $out_suffix...";
 
-  	# open file
-  	open(FH, ">", $dir."/".$name)
-  		or die("Can't open $dir.$name: $!");
+# process files
+for (my $i = 0; $i < $out_number; $i++) {
+	# compute file size
+	my $out_size = ($out_min_size + int(rand($out_off_size))) * 1024;
 
-  	# write buffer to file
-  	print(FH $outBuf);
+	# compute file name
+	my $out_name = "file_".$i.$out_suffix;
 
-  	# close file
-  	close(FH);
-  }
-};
+	# generate buffer
+#	my $outBuf = "";
+#	for (my $j = 0; $j < $size; $j++) {
+		# generate random byte
+#		$outBuf .= chr(int(rand(256)));
+#	}
 
-print "...done! Exiting.\n";
+	# open file
+	open(FH, ">", File::Spec->catfile($out_directory, $out_name))
+		or die("Can't open ".File::Spec->catfile($out_directory, $out_name).": $!");
+
+	# write buffer to file
+	print(FH substr($buffer,0,$out_size));
+
+	# close file
+	close(FH);
+}
+
+say "...done! Exiting.";
