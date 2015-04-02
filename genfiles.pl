@@ -49,8 +49,7 @@ unless (getopts('n:t:')) {
   exit 1;
 }
 
-# directory must be given an must be absolute path
-# unless ($ARGV[0] && $ARGV[0] =~ "^/") {
+# directory must be given and must be absolute path
 unless ($ARGV[0] && File::Spec->file_name_is_absolute($ARGV[0])) {
   HELP_MESSAGE();
   exit 1;
@@ -87,16 +86,12 @@ my $config_file = Config::General->new(
 my %config = $config_file->getall();
 
 # read options from config file
+my $buffer_size = $config{buffersize} * 1024 || 0;
 my $out_suffix = $config{filetype}{$out_type}{suffix};
 my $out_min_size = $config{filetype}{$out_type}{minsize} || 0;
 my $out_off_size = ($config{filetype}{$out_type}{maxsize} || 0) - $out_min_size;
-my $buffer_size = $config{buffersize} * 1024 || 0;
 
 # TODO: check that min_size < max_size
-
-# make STDOUT handle hot
-# so that messages are written during script execution (not afterwards)
-select((select(STDOUT), $|=1)[0]);
 
 ################################################################################
 # CREATE DIRECTORY
@@ -112,13 +107,21 @@ unless (-d $out_directory) {
 # GENERATE BUFFER
 ################################################################################
 
+# make STDOUT handle hot
+# so that messages are written during script execution (not afterwards)
+select((select(STDOUT), $|=1)[0]);
+
 say "Generating buffer of size ".($buffer_size/1024)." KB...";
 
+# initialize buffer
 my $buffer = "";
 for (my $i = 0; $i < $buffer_size; $i++) {
   # generate random ascii character
   $buffer .= chr(32 + int(rand(128 - 32)));
 }
+my $buffer_offset = 0;
+
+# TODO: add option to create binary data
 
 ################################################################################
 # GENERATE FILES
@@ -134,6 +137,8 @@ for (my $i = 0; $i < $out_number; $i++) {
 	# compute file name
 	my $out_name = "file_".$i.$out_suffix;
 
+# TODO: if ($buffer_size == 0) populate buffer on the fly
+
 	# generate buffer
 #	my $outBuf = "";
 #	for (my $j = 0; $j < $size; $j++) {
@@ -146,7 +151,12 @@ for (my $i = 0; $i < $out_number; $i++) {
 		or die("Can't open ".File::Spec->catfile($out_directory, $out_name).": $!");
 
 	# write buffer to file
-	print(FH substr($buffer,0,$out_size));
+	print(FH substr($buffer, $buffer_offset, $out_size));
+  $buffer_offset += $out_size;
+  if ($buffer_offset > $buffer_size) {
+    print(FH substr($buffer, 0, $buffer_offset - $buffer_size));
+    $buffer_offset -= $buffer_size;
+  }
 
 	# close file
 	close(FH);
