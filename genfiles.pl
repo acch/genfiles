@@ -151,10 +151,12 @@ for (my $i = 0; $i < $out_number; $i++) {
 		or die("Can't open ".File::Spec->catfile($out_directory, $out_name).": $!");
 
 	# write buffer to file
-	print(FH substr($buffer, $buffer_offset, $out_size));
+	print(FH substr($buffer, $buffer_offset, $out_size))
+    or die ("Can't write to ".File::Spec->catfile($out_directory, $out_name).": $!");
   $buffer_offset += $out_size;
-  if ($buffer_offset > $buffer_size) {
-    print(FH substr($buffer, 0, $buffer_offset - $buffer_size));
+  while ($buffer_offset > $buffer_size) {
+    print(FH substr($buffer, 0, $buffer_offset - $buffer_size))
+      or die ("Can't write to ".File::Spec->catfile($out_directory, $out_name).": $!");
     $buffer_offset -= $buffer_size;
   }
 
