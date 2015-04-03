@@ -119,7 +119,7 @@ for (my $i = 0; $i < $buffer_size; $i++) {
   # generate random ascii character
   $buffer .= chr(32 + int(rand(128 - 32)));
 }
-my $buffer_offset = 0;
+my $buffer_offset = 0; # position in buffer
 
 # TODO: add option to create binary data
 
@@ -131,14 +131,13 @@ say "Generating $out_number files of random size in $out_directory with suffix $
 
 # process files
 for (my $i = 0; $i < $out_number; $i++) {
+  # compute file name
+	my $out_name = File::Spec->catfile($out_directory, "file_".$i.$out_suffix);
+
 	# compute file size
 	my $out_size = ($out_min_size + int(rand($out_off_size))) * 1024;
 
-	# compute file name
-	my $out_name = "file_".$i.$out_suffix;
-
-# TODO: if ($buffer_size == 0) populate buffer on the fly
-
+# TODO: if ($buffer_size == 0) generate buffer on the fly
 	# generate buffer
 #	my $outBuf = "";
 #	for (my $j = 0; $j < $size; $j++) {
@@ -147,17 +146,25 @@ for (my $i = 0; $i < $out_number; $i++) {
 #	}
 
 	# open file
-	open(FH, ">", File::Spec->catfile($out_directory, $out_name))
-		or die("Can't open ".File::Spec->catfile($out_directory, $out_name).": $!");
+	open(FH, ">", $out_name)
+		or die("Can't open $out_name: $!");
 
 	# write buffer to file
 	print(FH substr($buffer, $buffer_offset, $out_size))
-    or die ("Can't write to ".File::Spec->catfile($out_directory, $out_name).": $!");
-  $buffer_offset += $out_size;
-  while ($buffer_offset > $buffer_size) {
-    print(FH substr($buffer, 0, $buffer_offset - $buffer_size))
-      or die ("Can't write to ".File::Spec->catfile($out_directory, $out_name).": $!");
-    $buffer_offset -= $buffer_size;
+    or die ("Can't write to $out_name: $!");
+  $buffer_offset += $out_size; # increment position by requested file size
+
+  # check to see if we've reached end of buffer
+  if ($buffer_offset == $buffer_size) {
+    $buffer_offset = 0; # reset position
+  } else {
+    # check to see if we've already gone beyond end of buffer
+    while ($buffer_offset > $buffer_size) {
+      # write remaining data from beginning of buffer
+      print(FH substr($buffer, 0, $buffer_offset - $buffer_size))
+        or die ("Can't write to $out_name: $!");
+      $buffer_offset -= $buffer_size; # decrement position by actual buffer size
+    }
   }
 
 	# close file
