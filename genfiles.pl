@@ -8,6 +8,7 @@ use feature "say"; # say()
 #use Cwd; # cwd()
 use Getopt::Std; # getopts()
 use Config::General; # Config::General->getall()
+use File::Spec; # file_name_is_absolute(), splitpath(), catpath(), catfile()
 
 # default options
 use constant {
@@ -50,7 +51,7 @@ unless (getopts('n:t:')) {
 }
 
 # directory must be given and must be absolute path
-unless ($ARGV[0] && File::Spec->file_name_is_absolute($ARGV[0])) {
+unless ($ARGV[0] && file_name_is_absolute($ARGV[0])) {
   HELP_MESSAGE();
   exit 1;
 }
@@ -71,9 +72,9 @@ if (&DEBUG) {
 ################################################################################
 
 # compute full path to config file
-my ($script_vol, $script_path) = File::Spec->splitpath($0);
-$script_path = File::Spec->catpath($script_vol, $script_path, undef);
-my $config_file_path = File::Spec->catfile($script_path, &CONFIG_FILE);
+my ($script_vol, $script_path) = splitpath($0);
+$script_path = catpath($script_vol, $script_path, undef);
+my $config_file_path = catfile($script_path, &CONFIG_FILE);
 
 # check config file
 (-f $config_file_path)
@@ -84,6 +85,8 @@ my $config_file = Config::General->new(
   -ConfigFile => $config_file_path,
   -LowerCaseNames => 1);
 my %config = $config_file->getall();
+
+# TODO: check that out_type is defined in config file
 
 # read options from config file
 my $buffer_size = $config{buffersize} * 1024 || 0;
@@ -108,7 +111,7 @@ unless (-d $out_directory) {
 ################################################################################
 
 # make STDOUT handle hot
-# so that messages are written during script execution (not afterwards)
+# so that messages are written during script execution (and not afterwards)
 select((select(STDOUT), $|=1)[0]);
 
 say "Generating buffer of size ".($buffer_size/1024)." KB...";
