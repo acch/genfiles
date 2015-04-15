@@ -8,7 +8,6 @@ use feature "say"; # say()
 #use Cwd; # cwd()
 use Getopt::Std; # getopts()
 use Config::General; # Config::General->getall()
-use File::Spec; # file_name_is_absolute(), splitpath(), catpath(), catfile()
 
 # default options
 use constant {
@@ -51,7 +50,7 @@ unless (getopts('n:t:')) {
 }
 
 # directory must be given and must be absolute path
-unless ($ARGV[0] && file_name_is_absolute($ARGV[0])) {
+unless ($ARGV[0] && File::Spec->file_name_is_absolute($ARGV[0])) {
   HELP_MESSAGE();
   exit 1;
 }
@@ -72,9 +71,9 @@ if (&DEBUG) {
 ################################################################################
 
 # compute full path to config file
-my ($script_vol, $script_path) = splitpath($0);
-$script_path = catpath($script_vol, $script_path, undef);
-my $config_file_path = catfile($script_path, &CONFIG_FILE);
+my ($script_vol, $script_path) = File::Spec->splitpath($0);
+$script_path = File::Spec->catpath($script_vol, $script_path, undef);
+my $config_file_path = File::Spec->catfile($script_path, &CONFIG_FILE);
 
 # check config file
 (-f $config_file_path)
@@ -86,7 +85,10 @@ my $config_file = Config::General->new(
   -LowerCaseNames => 1);
 my %config = $config_file->getall();
 
-# TODO: check that out_type is defined in config file
+# check if requested file type is defined in config file
+unless ($config{filetype}{$out_type}) {
+  die("Type ".$out_type." not defined in config file: ".$config_file_path."\n");
+}
 
 # read options from config file
 my $buffer_size = $config{buffersize} * 1024 || 0;
