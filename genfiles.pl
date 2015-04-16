@@ -56,9 +56,9 @@ unless ($ARGV[0] && File::Spec->file_name_is_absolute($ARGV[0])) {
 }
 
 # use commandline options or default
-my $out_directory=$ARGV[0];
-my $out_number=$opt_n || &DEFAULT_NUMBER;
-my $out_type=$opt_t || &DEFAULT_TYPE;
+my $out_directory = $ARGV[0];
+my $out_number = $opt_n || &DEFAULT_NUMBER;
+my $out_type = $opt_t || &DEFAULT_TYPE;
 
 if (&DEBUG) {
   say "d: ".$out_directory;
@@ -86,15 +86,14 @@ my $config_file = Config::General->new(
 my %config = $config_file->getall();
 
 # check if requested file type is defined in config file
-unless ($config{filetype}{$out_type}) {
-  die("Type ".$out_type." not defined in config file: ".$config_file_path."\n");
-}
+my %out_type_config = %config{filetype}{$out_type}
+  or die("Type ".$out_type." not defined in config file: ".$config_file_path."\n");
 
 # read options from config file
 my $buffer_size = $config{buffersize} * 1024 || 0;
-my $out_suffix = $config{filetype}{$out_type}{suffix};
-my $out_min_size = $config{filetype}{$out_type}{minsize} || 0;
-my $out_off_size = ($config{filetype}{$out_type}{maxsize} || 0) - $out_min_size;
+my $out_suffix = $out_type_config{suffix};
+my $out_min_size = $out_type_config{minsize} || 0;
+my $out_off_size = ($out_type_config{maxsize} || 0) - $out_min_size;
 
 # TODO: check that min_size < max_size
 
