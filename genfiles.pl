@@ -5,12 +5,12 @@ use warnings;
 
 use feature "say"; # say()
 
-#use Cwd; # cwd()
 use Getopt::Std; # getopts()
 use Config::General; # Config::General->getall()
 
 # default options
 use constant {
+  VERSION => "0.1.1",
   DEBUG => 1,
   CONFIG_FILE => "genfiles.conf",
   DEFAULT_NUMBER => 100,
@@ -19,12 +19,12 @@ use constant {
 
 # --version message
 sub VERSION_MESSAGE {
-  say STDERR "Genfiles Version 0.1";
+  say STDERR "Genfiles Version ".&VERSION;
 }
 
 # --help message
 sub HELP_MESSAGE {
-  say STDERR "Usage: $0 [-n <number_of_files>] [-t <file_type>] <directory>";
+  say STDERR "Usage: ".$0." [-n <number_of_files>] [-t <file_type>] <directory>";
   say STDERR "       -n number";
   say STDERR "           Number of files to generate (default = ".&DEFAULT_NUMBER.")";
   say STDERR "       -t type";
@@ -86,14 +86,14 @@ my $config_file = Config::General->new(
 my %config = $config_file->getall();
 
 # check if requested file type is defined in config file
-my %out_type_config = %config{filetype}{$out_type}
+my $out_type_config = \$config{filetype}{$out_type}
   or die("Type ".$out_type." not defined in config file: ".$config_file_path."\n");
 
 # read options from config file
 my $buffer_size = $config{buffersize} * 1024 || 0;
-my $out_suffix = $out_type_config{suffix};
-my $out_min_size = $out_type_config{minsize} || 0;
-my $out_off_size = ($out_type_config{maxsize} || 0) - $out_min_size;
+my $out_suffix = ${$out_type_config}{suffix};
+my $out_min_size = ${$out_type_config}{minsize} || 0;
+my $out_off_size = (${$out_type_config}{maxsize} || 0) - $out_min_size;
 
 # TODO: check that min_size < max_size
 
@@ -104,7 +104,7 @@ my $out_off_size = ($out_type_config{maxsize} || 0) - $out_min_size;
 # create directory if it does not exist
 unless (-d $out_directory) {
   mkdir($out_directory)
-    or die("Can't create $out_directory: $!");
+    or die("Can't create ".$out_directory.": ".$!."\n");
 }
 
 ################################################################################
@@ -115,15 +115,21 @@ unless (-d $out_directory) {
 # so that messages are written during script execution (and not afterwards)
 select((select(STDOUT), $|=1)[0]);
 
-say "Generating buffer of size ".($buffer_size/1024)." KB...";
-
-# initialize buffer
 my $buffer = "";
-for (my $i = 0; $i < $buffer_size; $i++) {
-  # generate random ascii character
-  $buffer .= chr(32 + int(rand(128 - 32)));
-}
 my $buffer_offset = 0; # position in buffer
+
+# check if pre-buffering is requested
+if ($buffer_size) {
+  say "Generating buffer of size ".($buffer_size/1024)." KB...";
+
+  # generate buffer
+  for (my $i = 0; $i < $buffer_size; $i++) {
+    # generate random ascii character
+    $buffer .= chr(32 + int(rand(128 - 32)));
+  }
+
+  say "...done!";
+}
 
 # TODO: add option to create binary data
 
@@ -151,11 +157,11 @@ for (my $i = 0; $i < $out_number; $i++) {
 
 	# open file
 	open(FH, ">", $out_name)
-		or die("Can't open $out_name: $!");
+		or die("Can't open ".$out_name.": ".$!."\n");
 
 	# write buffer to file
 	print(FH substr($buffer, $buffer_offset, $out_size))
-    or die ("Can't write to $out_name: $!");
+    or die ("Can't write to ".$out_name.": ".$!."\n");
   $buffer_offset += $out_size; # increment position by requested file size
 
   # check to see if we've reached end of buffer
@@ -166,13 +172,14 @@ for (my $i = 0; $i < $out_number; $i++) {
     while ($buffer_offset > $buffer_size) {
       # write remaining data from beginning of buffer
       print(FH substr($buffer, 0, $buffer_offset - $buffer_size))
-        or die ("Can't write to $out_name: $!");
-      $buffer_offset -= $buffer_size; # decrement position by actual buffer size
+        or die ("Can't write to ".$out_name.": ".$!."\n");
+      # decrement position by actual buffer size
+      $buffer_offset -= $buffer_size;
     }
   }
 
 	# close file
-	close(FH);
+  close(FH);
 }
 
 say "...done! Exiting.";
