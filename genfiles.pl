@@ -95,7 +95,9 @@ my $out_suffix = ${$out_type_config}{suffix};
 my $out_min_size = ${$out_type_config}{minsize} || 0;
 my $out_off_size = (${$out_type_config}{maxsize} || 0) - $out_min_size;
 
-# TODO: check that min_size < max_size
+# check plausability of options
+(($out_min_size >= 0) && ($out_off_size >= 0))
+  or die("Invalid options detected for type ".$out_type." in config file: ".$config_file_path."\n");
 
 ################################################################################
 # CREATE DIRECTORY
@@ -142,10 +144,10 @@ say "Generating ".$out_number." files of random size in ".$out_directory." with 
 # process files
 for (my $i = 0; $i < $out_number; $i++) {
   # compute file name
-	my $out_name = File::Spec->catfile($out_directory, "file_".$i.$out_suffix);
+  my $out_name = File::Spec->catfile($out_directory, "file_".$i.$out_suffix);
 
-	# compute file size
-	my $out_size = ($out_min_size + int(rand($out_off_size))) * 1024;
+  # compute file size
+  my $out_size = ($out_min_size + int(rand($out_off_size))) * 1024;
 
   # check if buffer was already pre-generated
   unless ($buffer_size) {
@@ -153,15 +155,15 @@ for (my $i = 0; $i < $out_number; $i++) {
     for (my $j = 0; $j < $out_size; $j++) {
       # generate random ascii character
       $buffer .= chr(32 + int(rand(128 - 32)));
-  	}
+    }
   }
 
-	# open file
-	open(FH, ">", $out_name)
-		or die("Can't open ".$out_name.": ".$!."\n");
+  # open file
+  open(FH, ">", $out_name)
+    or die("Can't open ".$out_name.": ".$!."\n");
 
-	# write buffer to file
-	print(FH substr($buffer, $buffer_offset, $out_size))
+  # write buffer to file
+  print(FH substr($buffer, $buffer_offset, $out_size))
     or die ("Can't write to ".$out_name.": ".$!."\n");
 
   # check if pre-generated buffer is used
@@ -185,7 +187,7 @@ for (my $i = 0; $i < $out_number; $i++) {
     }
   }
 
-	# close file
+  # close file
   close(FH);
 }
 
