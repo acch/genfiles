@@ -14,7 +14,8 @@ use constant {
   DEBUG => 1,
   CONFIG_FILE => "genfiles.conf",
   DEFAULT_NUMBER => 100,
-  DEFAULT_TYPE => "tmp"
+  DEFAULT_TYPE => "tmp",
+  DEFAULT_FORMAT => 1 # ascii text
 };
 
 # --version message
@@ -94,9 +95,14 @@ my $buffer_size = $config{buffersize} * 1024 || 0;
 my $out_suffix = ${$out_type_config}{suffix};
 my $out_min_size = ${$out_type_config}{minsize} || 0;
 my $out_off_size = (${$out_type_config}{maxsize} || 0) - $out_min_size;
+my $out_format = ${$out_type_config}{format};
+defined($out_format) or $out_format = &DEFAULT_FORMAT;
 
 # check plausability of options
-(($out_min_size >= 0) && ($out_off_size >= 0) && ($out_min_size + $out_off_size > 0))
+(($out_min_size >= 0) &&
+  ($out_off_size >= 0) &&
+  ($out_min_size + $out_off_size > 0) &&
+  ($out_format == 0) || ($out_format == 1))
   or die("Invalid options detected for type ".$out_type." in config file: ".$config_file_path."\n");
 
 ################################################################################
@@ -124,16 +130,22 @@ my $buffer_offset = 0; # position in buffer
 if ($buffer_size) {
   say "Generating buffer of size ".($buffer_size/1024)." KB...";
 
-  # generate buffer
-  for (my $i = 0; $i < $buffer_size; $i++) {
-    # generate random ascii character
-    $buffer .= chr(32 + int(rand(128 - 32)));
+  if ($out_format == 0) {
+    # generate binary data buffer
+    for (my $i = 0; $i < $buffer_size; $i++) {
+      # generate random byte
+      $buffer .= chr(int(rand(256)))
+    }
+  } else { # $out_format == 1
+    # generate ascii text buffer
+    for (my $i = 0; $i < $buffer_size; $i++) {
+      # generate random ascii character
+      $buffer .= chr(32 + int(rand(128 - 32)));
+    }
   }
 
   say "...done!";
 }
-
-# TODO: add option to create binary data
 
 ################################################################################
 # GENERATE FILES
@@ -151,10 +163,18 @@ for (my $i = 0; $i < $out_number; $i++) {
 
   # check if buffer was already pre-generated
   unless ($buffer_size) {
-    # generate buffer for file size
-    for (my $j = 0; $j < $out_size; $j++) {
-      # generate random ascii character
-      $buffer .= chr(32 + int(rand(128 - 32)));
+    if ($out_format == 0) {
+      # generate binary data buffer
+      for (my $j = 0; $j < $out_size; $j++) {
+        # generate random byte
+        $buffer .= chr(int(rand(256)))
+      }
+    } else { # $out_format == 1
+      # generate ascii text buffer
+      for (my $j = 0; $j < $out_size; $j++) {
+        # generate random ascii character
+        $buffer .= chr(32 + int(rand(128 - 32)));
+      }
     }
   }
 
