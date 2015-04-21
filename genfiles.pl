@@ -86,7 +86,7 @@ my $config_file = Config::General->new(
 my %config = $config_file->getall();
 
 # check if requested file type is defined in config file
-my $out_type_config = \$config{filetype}{$out_type}
+my $out_type_config = $config{filetype}{$out_type}
   or die("Type ".$out_type." not defined in config file: ".$config_file_path."\n");
 
 # read options from config file
@@ -118,7 +118,7 @@ select((select(STDOUT), $|=1)[0]);
 my $buffer = "";
 my $buffer_offset = 0; # position in buffer
 
-# check if pre-buffering is requested
+# check if pre-generation of buffer is requested
 if ($buffer_size) {
   say "Generating buffer of size ".($buffer_size/1024)." KB...";
 
@@ -137,7 +137,7 @@ if ($buffer_size) {
 # GENERATE FILES
 ################################################################################
 
-say "Generating $out_number files of random size in $out_directory with suffix $out_suffix...";
+say "Generating ".$out_number." files of random size in ".$out_directory." with suffix ".$out_suffix."...";
 
 # process files
 for (my $i = 0; $i < $out_number; $i++) {
@@ -147,13 +147,14 @@ for (my $i = 0; $i < $out_number; $i++) {
 	# compute file size
 	my $out_size = ($out_min_size + int(rand($out_off_size))) * 1024;
 
-# TODO: if ($buffer_size == 0) generate buffer on the fly
-	# generate buffer
-#	my $outBuf = "";
-#	for (my $j = 0; $j < $size; $j++) {
-		# generate random byte
-#		$outBuf .= chr(int(rand(256)));
-#	}
+  # check if buffer was already pre-generated
+  unless ($buffer_size) {
+    # generate buffer
+    for (my $j = 0; $j < $out_size; $j++) {
+      # generate random ascii character
+      $buffer .= chr(32 + int(rand(128 - 32)));
+  	}
+  }
 
 	# open file
 	open(FH, ">", $out_name)
@@ -162,19 +163,25 @@ for (my $i = 0; $i < $out_number; $i++) {
 	# write buffer to file
 	print(FH substr($buffer, $buffer_offset, $out_size))
     or die ("Can't write to ".$out_name.": ".$!."\n");
-  $buffer_offset += $out_size; # increment position by requested file size
 
-  # check to see if we've reached end of buffer
-  if ($buffer_offset == $buffer_size) {
-    $buffer_offset = 0; # reset position
-  } else {
-    # check to see if we've already gone beyond end of buffer
-    while ($buffer_offset > $buffer_size) {
-      # write remaining data from beginning of buffer
-      print(FH substr($buffer, 0, $buffer_offset - $buffer_size))
-        or die ("Can't write to ".$out_name.": ".$!."\n");
-      # decrement position by actual buffer size
-      $buffer_offset -= $buffer_size;
+  # check if pre-generated buffer is used
+  if ($buffer_size) {
+    # increment position by requested file size
+    $buffer_offset += $out_size;
+
+    # check if we've reached end of buffer
+    if ($buffer_offset == $buffer_size) {
+      # reset position
+      $buffer_offset = 0;
+    } else {
+      # check if we've already gone beyond end of buffer
+      while ($buffer_offset > $buffer_size) {
+        # write remaining data from beginning of buffer
+        print(FH substr($buffer, 0, $buffer_offset - $buffer_size))
+          or die ("Can't write to ".$out_name.": ".$!."\n");
+        # decrement position by actual buffer size
+        $buffer_offset -= $buffer_size;
+      }
     }
   }
 
