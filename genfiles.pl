@@ -96,7 +96,7 @@ my $out_min_size = ${$out_type_config}{minsize} || 0;
 my $out_off_size = (${$out_type_config}{maxsize} || 0) - $out_min_size;
 
 # check plausability of options
-(($out_min_size >= 0) && ($out_off_size >= 0))
+(($out_min_size >= 0) && ($out_off_size >= 0) && ($out_min_size + $out_off_size > 0))
   or die("Invalid options detected for type ".$out_type." in config file: ".$config_file_path."\n");
 
 ################################################################################
@@ -151,7 +151,7 @@ for (my $i = 0; $i < $out_number; $i++) {
 
   # check if buffer was already pre-generated
   unless ($buffer_size) {
-    # generate buffer
+    # generate buffer for file size
     for (my $j = 0; $j < $out_size; $j++) {
       # generate random ascii character
       $buffer .= chr(32 + int(rand(128 - 32)));
