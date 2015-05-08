@@ -5,7 +5,8 @@ use warnings;
 
 use feature "say"; # say()
 
-use Getopt::Std; # getopts()
+use Getopt::Std "getopts";
+use File::Path "make_path";
 use Config::General; # Config::General->getall()
 
 # default options
@@ -111,7 +112,7 @@ defined($out_format) or $out_format = &DEFAULT_FORMAT;
 
 # create directory if it does not exist
 unless (-d $out_directory) {
-  mkdir($out_directory)
+  make_path($out_directory)
     or die("Can't create ".$out_directory.": ".$!."\n");
 }
 
