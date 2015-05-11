@@ -19,6 +19,16 @@ use constant {
   DEFAULT_FORMAT => 1 # ascii text
 };
 
+################################################################################
+# GLOBALS
+################################################################################
+
+my $buffer = "";
+
+################################################################################
+# FUNCTIONS
+################################################################################
+
 # --version message
 sub VERSION_MESSAGE {
   say STDERR "Genfiles Version ".&VERSION;
@@ -35,6 +45,26 @@ sub HELP_MESSAGE {
   say STDERR "       directory";
   say STDERR "           The absolute path of the directory in which files will be generated";
   say STDERR "           Directory will be created if it does not exist";
+}
+
+# generate buffer
+# parameters:
+# 1. format of the buffer (0 = binary, 1 = ascii)
+# 2. size of the buffer
+sub genbuffer {
+  if ($_[0] == 0) {
+    # generate binary data buffer
+    for (my $i = 0; $i < $_[1]; $i++) {
+      # generate random byte
+      $buffer .= chr(int(rand(256)))
+    }
+  } else { # $_[0] == 1
+    # generate ascii text buffer
+    for (my $i = 0; $i < $_[1]; $i++) {
+      # generate random ascii character
+      $buffer .= chr(32 + int(rand(127 - 32)));
+    }
+  }
 }
 
 ################################################################################
@@ -124,26 +154,12 @@ unless (-d $out_directory) {
 # so that messages are written during script execution (and not afterwards)
 select((select(STDOUT), $|=1)[0]);
 
-my $buffer = "";
-my $buffer_offset = 0; # position in buffer
-
 # check if pre-generation of buffer is requested
 if ($buffer_size) {
   say "Generating buffer of size ".($buffer_size/1024)." KB...";
 
-  if ($out_format == 0) {
-    # generate binary data buffer
-    for (my $i = 0; $i < $buffer_size; $i++) {
-      # generate random byte
-      $buffer .= chr(int(rand(256)))
-    }
-  } else { # $out_format == 1
-    # generate ascii text buffer
-    for (my $i = 0; $i < $buffer_size; $i++) {
-      # generate random ascii character
-      $buffer .= chr(32 + int(rand(128 - 32)));
-    }
-  }
+  # generate buffer of fixed size
+  genbuffer($out_format, $buffer_size);
 
   say "...done!";
 }
@@ -151,6 +167,9 @@ if ($buffer_size) {
 ################################################################################
 # GENERATE FILES
 ################################################################################
+
+# position in buffer
+my $buffer_offset = 0;
 
 say "Generating ".$out_number." files of random size in ".$out_directory." with suffix ".$out_suffix."...";
 
@@ -164,19 +183,8 @@ for (my $i = 0; $i < $out_number; $i++) {
 
   # check if buffer was already pre-generated
   unless ($buffer_size) {
-    if ($out_format == 0) {
-      # generate binary data buffer
-      for (my $j = 0; $j < $out_size; $j++) {
-        # generate random byte
-        $buffer .= chr(int(rand(256)))
-      }
-    } else { # $out_format == 1
-      # generate ascii text buffer
-      for (my $j = 0; $j < $out_size; $j++) {
-        # generate random ascii character
-        $buffer .= chr(32 + int(rand(128 - 32)));
-      }
-    }
+    # generate buffer for this file
+    genbuffer($out_format, $out_size);
   }
 
   # open file
