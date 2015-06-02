@@ -7,7 +7,7 @@ Tool for generating files with random content for test / demonstration purposes.
 The Perl script requires:
 - Perl [Config::General](https://metacpan.org/pod/Config::General) Module
 
-On RedHat based systems install `perl-Config-General`.
+On RedHat based systems install `perl-Config-General`. For RHEL7 this package is available from [EPEL](http://dl.fedoraproject.org/pub/epel/7/x86_64/repoview/perl-Config-General.html).
 
 The pre-compiled binaries do not require any additional libraries other than Perl itself.
 
