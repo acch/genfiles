@@ -1,5 +1,17 @@
 #!/usr/bin/perl
 
+=head1 genfiles.pl
+
+==========================================================================
+  Genfiles v1.0
+  https://github.com/acch/genfiles
+==========================================================================
+  Copyright 2015 Achim Christ
+  Licensed under MIT (https://github.com/acch/genfiles/blob/master/LICENSE)
+==========================================================================
+
+=cut
+
 use strict;
 use warnings;
 
@@ -11,7 +23,7 @@ use Config::General; # Config::General->getall()
 
 # default options
 use constant {
-  VERSION => "0.1.1",
+  VERSION => "1.0",
   DEBUG => 1,
   CONFIG_FILE => "genfiles.conf",
   DEFAULT_NUMBER => 100,
@@ -31,7 +43,7 @@ my $buffer = "";
 
 # --version message
 sub VERSION_MESSAGE {
-  say STDERR "Genfiles Version ".&VERSION;
+  say STDERR "Genfiles version ".&VERSION;
 }
 
 # --help message
@@ -72,7 +84,7 @@ sub genbuffer {
 ################################################################################
 
 # declare commandline options
-our($opt_d, $opt_n, $opt_t);
+our($opt_n, $opt_t);
 
 # read commandline options
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
