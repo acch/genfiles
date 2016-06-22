@@ -17,4 +17,8 @@ File | Description
 --- | ---
 genfiles.pl | The Perl script to generate files
 genfiles.conf | The configuration file defining file types which are generated
-genfiles.RHEL6, genfiles.RHEL7, etc. | Pre-combiled binaries to generate files
+genfiles | Pre-combiled binary to generate files
+
+## Copyright and license
+
+Copyright 2015 Achim Christ, released under the [MIT license](LICENSE).
