@@ -24,7 +24,7 @@ use Config::General; # Config::General->getall()
 # default options
 use constant {
   VERSION => "1.0",
-  DEBUG => 1,
+  DEBUG => 0,
   CONFIG_FILE => "genfiles.conf",
   DEFAULT_NUMBER => 100,
   DEFAULT_TYPE => "tmp",
