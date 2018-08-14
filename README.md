@@ -1,5 +1,7 @@
 # Genfiles
 
+[![GitHub Issues](https://img.shields.io/github/issues/acch/genfiles.svg)](https://github.com/acch/genfiles/issues) [![GitHub Stars](https://img.shields.io/github/stars/acch/genfiles.svg?label=github%20%E2%98%85)](https://github.com/acch/genfiles/) [![License](https://img.shields.io/github/license/acch/genfiles.svg)](LICENSE)
+
 Tool for generating files with random content for test / demonstration purposes. The script is written in Perl and should run on any system which has Perl installed.
 
 ## Requirements
